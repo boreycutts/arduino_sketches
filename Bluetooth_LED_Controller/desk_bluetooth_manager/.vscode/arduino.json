@@ -1,0 +1,5 @@
+{
+    "board": "arduino:avr:uno",
+    "sketch": "desk_bluetooth_manager.ino",
+    "port": "COM4"
+}
