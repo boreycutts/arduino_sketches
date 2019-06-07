@@ -1,4 +1,4 @@
-int PWM = 3;
+#define PWM 3
 int x = 0;
 bool initialized = false;
 

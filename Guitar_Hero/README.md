@@ -1,0 +1,2 @@
+# Guitar Hero
+These sketches are used to test and emulate the controls on a custom made Guitar Hero Controller. `guitar_hero.ino` is used to test the inputs of the controller. It outputs the buttons pressed/analog input values via the serial console. `guitar_hero_keyboard.ino` is what is actually used to emulate keypresses using the controller buttons. The Arduino Uno used in this project is flashed with the `Arduino-keyboard-0.3.hex` file to allow it to emulate a USB HID keyboard (which is recognized in Guitar Hero PC as a controller).

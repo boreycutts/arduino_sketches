@@ -1,0 +1,2 @@
+# Bluetooth LED Conroller
+These sketches are used to control a strip of WS2182B LEDs via Android Applicatoion over Bluetooth. `desk_bluetooth_manager.ino` receives the Bluetooth serial data and sends it to another Arduino running `desk_bluetooth_leds.ino` which drives the LEDs. Two Arduinos are used in this application so that the Arduino driving the LEDs can simultaneously recieve the serial data when an interrupt is triggered by the Arduino running `desk_bluetooth_manager.ino`.

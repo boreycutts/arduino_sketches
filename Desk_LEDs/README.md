@@ -1,0 +1,2 @@
+# Desk LEDs
+These sketches are both used to drive WS2182B LED strips underneath my desk. They light up based on the analog input from a microphone so that the effects can sync up with the music playing from my computer.
