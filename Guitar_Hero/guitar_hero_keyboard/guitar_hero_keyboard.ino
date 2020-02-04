@@ -19,20 +19,24 @@
 #define KEY_MOD_LSHIFT 0x02 // Keyboard Left Shift
 #define KEY_BACKSPACE 0x2a // Keyboard DELETE (Backspace)
 
+// Mode Stuff
+#define MODES 2
+#define MODE_CHANGE_TIMEOUT 300
+
 // LED Stuff
 #define PIN 11
 #define LEDS 20
-#define DELAY 15
+#define FADE_SPEED 8
 
 // HSV Color Definitions
-#define RED 16711680
-#define ORANGE 16722432
-#define YELLOW 16776960
-#define GREEN 65280
-#define CYAN 65322
-#define BLUE 255
-#define INDIGO 2752767
-#define VIOLET 16711935
+#define RED 0
+#define ORANGE 5462
+#define YELLOW 10923
+#define GREEN 21845
+#define CYAN 32768
+#define BLUE 43691
+#define INDIGO 49153
+#define VIOLET 54613
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(LEDS, PIN, NEO_GRB + NEO_KHZ800);
 
@@ -54,8 +58,8 @@ void setup()
     strip.show();
 }
 
-bool green=false, red=false, yellow=false, blue=false, orange=false, fret_up=false, fret_down=false, start_=false, select=false, star=false;
-int whammy=0, thumb_x=0, thumb_y=0;
+bool green=false, red=false, yellow=false, blue=false, orange=false, fret_up=false, fret_down=false, start_=false, select=false, star=false, cleared=false;
+int whammy=0, thumb_x=0, thumb_y=0, modeChange=0, mode=0;
 uint8_t i=2;
 String buttonsPressed = "";
 
@@ -70,70 +74,148 @@ void loop()
     * 
     * 
     */
-    updateButtonsPressed();
-    if(buttonsPressed.length()) {
-        buttonAnimation(buttonsPressed);
+
+    if(mode == 0) {
+        if(cleared) {
+            for(uint8_t i = 0; i < LEDS; i++) {
+                for(uint16_t brightness = 0; brightness < 255; brightness+=4) {
+                    strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(CYAN, 255, brightness)));
+                    strip.show();
+                }
+            }
+            delay(100);
+            for(int16_t brightness = 254; brightness >= 0; brightness--) {
+                for(uint8_t i = 0; i < LEDS; i++) {
+                    strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(CYAN, 255, brightness)));
+                }
+                strip.show();
+                delay(4);
+            }
+            cleared = false;
+        }
+        updateButtonsPressed();
+        if(buttonsPressed.length()) {
+            buttonAnimation(buttonsPressed);
+        } else {
+            for(uint8_t i = 0; i < LEDS; i++) {
+                strip.setPixelColor(i, 0, 0, 0);
+            }
+            strip.show();
+        }
+    } else if(mode == 1) {
+        rainbow(mode);
     } else {
-        for(uint8_t i = 0; i < LEDS; i++) {
-            strip.setPixelColor(i, 0, 0, 0);
+        if(!cleared) {
+            for(uint8_t i = 0; i < LEDS; i++) {
+                strip.setPixelColor(i, 0, 0, 0);
+                strip.show();
+                delay(50);
+            }
+            cleared = true;
+        }
+        updateButtonsPressed();
+    }
+}
+
+void rainbow(const int modeInit) {
+    for(long firstPixelHue = 0; firstPixelHue < 5*65536; firstPixelHue += 256) {
+        updateButtonsPressed();
+        if(mode != modeInit) {
+            return;
+        }
+        
+        for(int i = 0; i < LEDS; i++) {
+            int pixelHue = firstPixelHue + (i * 65536L / LEDS);
+            strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(pixelHue)));
         }
         strip.show();
+        delay(10);
     }
 }
 
 void buttonAnimation(const String buttonsPressedInit) {
-    for(int i = 0; i < buttonsPressedInit.length(); i++) {
+    uint8_t colorIndex1 = 0;
+    uint8_t colorIndex2 = 1;
+    while(true) {
         updateButtonsPressed();
         if(buttonsPressed != buttonsPressedInit) {
             return;
         }
 
-        for(int j = 0; j < LEDS/2; j++) {
+        for(uint16_t brightness = 0; brightness < 255; brightness += FADE_SPEED) {
             updateButtonsPressed();
             if(buttonsPressed != buttonsPressedInit) {
                 return;
             }
-
-            setPixelColorByCharacter(j, buttonsPressed[i]);
-            strip.setPixelColor(LEDS/2 + j, 0, 0, 0);
+            
+            for(uint8_t led = 0; led < LEDS/2; led++) {
+                setPixelColorByCharacter(led, buttonsPressed[colorIndex1], brightness);
+            }
+            for(uint8_t led = LEDS/2; led < LEDS; led++) {
+                if(buttonsPressedInit.length() > 1) {
+                    setPixelColorByCharacter(led, buttonsPressed[colorIndex2], 255-brightness);
+                } else {
+                    setPixelColorByCharacter(led, buttonsPressed[0], 255-brightness);
+                }
+            }
             strip.show();
-            delay(DELAY);
         }
 
-        for(int j = 0; j < LEDS/2; j++) {
+        if(buttonsPressedInit.length() > 1) {
+            if(colorIndex2 < buttonsPressedInit.length() - 1) {
+                colorIndex2++;
+            } else {
+                colorIndex2 = 0;
+            }
+        }
+
+        for(int16_t brightness = 255; brightness >= 0; brightness -= FADE_SPEED) {
             updateButtonsPressed();
             if(buttonsPressed != buttonsPressedInit) {
                 return;
             }
-
-            setPixelColorByCharacter(LEDS/2 + j, buttonsPressed[i]);
-            strip.setPixelColor(j, 0, 0, 0);
+        
+            for(uint8_t led = 0; led < LEDS/2; led++) {
+                setPixelColorByCharacter(led, buttonsPressed[colorIndex1], brightness);
+            }
+            for(uint8_t led = LEDS/2; led < LEDS; led++) {
+                if(buttonsPressedInit.length() > 1) {
+                    setPixelColorByCharacter(led, buttonsPressed[colorIndex2], 255-brightness);
+                } else {
+                    setPixelColorByCharacter(led, buttonsPressed[0], 255-brightness);
+                }
+            }
             strip.show();
-            delay(DELAY);
+        }
+
+        if(colorIndex1 < buttonsPressedInit.length() - 1) {
+            colorIndex1++;
+        } else {
+            colorIndex1 = 0;
         }
     }
 }
 
-void setPixelColorByCharacter(int index, char c) {
+void setPixelColorByCharacter(uint8_t index, char c, uint8_t brightness) {
     switch(c) {
         case 'g':
-            strip.setPixelColor(index, GREEN);
+            strip.setPixelColor(index, strip.gamma32(strip.ColorHSV(GREEN, 255, brightness)));
             break;
             
         case 'r':
-            strip.setPixelColor(index, RED);
+            strip.setPixelColor(index, strip.gamma32(strip.ColorHSV(RED, 255, brightness)));
             break;
 
         case 'y':
-            strip.setPixelColor(index, YELLOW);
+            strip.setPixelColor(index, strip.gamma32(strip.ColorHSV(YELLOW, 255, brightness)));
             break;
 
         case 'b':
-            strip.setPixelColor(index, BLUE);
+            strip.setPixelColor(index, strip.gamma32(strip.ColorHSV(BLUE, 255, brightness)));
             break;
 
         case 'o':
-            strip.setPixelColor(index, ORANGE);
+            strip.setPixelColor(index, strip.gamma32(strip.ColorHSV(ORANGE, 255, brightness)));
             break;
     }
 }
@@ -235,6 +317,17 @@ void setBuffers() {
         if(i < 8) {
             i++;
         }
+        modeChange++;
+        if(modeChange > MODE_CHANGE_TIMEOUT) {
+            modeChange = 0;
+            if(mode < MODES) {
+                mode++;
+            } else { 
+                mode = 0;
+            }
+        }
+    } else {
+        modeChange = 0;
     }
     if(whammy > 600) {
         buf[0] = KEY_MOD_LSHIFT;
